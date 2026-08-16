@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>वात्सल्य क्लिनिकल लॅब</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f4f7fb;margin:0;color:#172033}
+header{background:#1565c0;color:white;padding:22px 18px;text-align:center} h1{margin:0;font-size:24px}
+nav{display:flex;gap:8px;overflow:auto;padding:10px;background:white;position:sticky;top:0;z-index:2}
+button{border:0;border-radius:10px;padding:12px 16px;background:#1565c0;color:white;font-size:15px}
+nav button{white-space:nowrap}.card{background:white;margin:12px;padding:16px;border-radius:16px;box-shadow:0 2px 10px #00000012}
+input,select{width:100%;box-sizing:border-box;padding:12px;margin:6px 0 12px;border:1px solid #ccd5e0;border-radius:10px;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
+.hidden{display:none}.success{color:#087f23}.danger{background:#b42318}.muted{color:#667085}
+</style></head>
+<body>
+<header><h1>वात्सल्य क्लिनिकल लॅब</h1><div>अभोणा चौफुली, अभोणा • मो. ८८५६९९२९३८</div></header>
+<nav><button onclick="show('home')">Dashboard</button><button onclick="show('patients')">Patients</button><button onclick="show('results')">Results</button><button onclick="show('billing')">Billing</button><button onclick="show('report')">Report</button><button onclick="backup()">Backup</button></nav>
+
+<section id="home" class="card"><h2>Offline Dashboard</h2><p id="stats"></p><p class="muted">हे software iPhone वर offline वापरण्यासाठी तयार केले आहे. डेटा या browser मध्ये स्थानिकरित्या साठवला जातो.</p></section>
+
+<section id="patients" class="card hidden"><h2>Patient Registration</h2>
+<input id="pn" placeholder="Patient Name *"><input id="pa" placeholder="Age"><select id="pg"><option>Male</option><option>Female</option><option>Other</option></select>
+<input id="pm" placeholder="Mobile"><input id="pd" placeholder="Doctor"><button onclick="savePatient()">Save Patient</button>
+<h3>Patient Search</h3><input id="ps" placeholder="Name / Mobile / ID" oninput="renderPatients()"><div id="plist"></div></section>
+
+<section id="results" class="card hidden"><h2>Test / Result Entry</h2>
+<input id="rid" type="number" placeholder="Patient ID"><input id="rt" placeholder="Test Name"><input id="rr" placeholder="Result"><input id="ru" placeholder="Unit"><input id="rf" placeholder="Reference Range"><button onclick="saveResult()">Save Result</button>
+<div id="rlist"></div></section>
+
+<section id="billing" class="card hidden"><h2>Billing</h2><input id="bid" type="number" placeholder="Patient ID"><input id="ba" type="number" placeholder="Total Amount ₹"><input id="bp" type="number" placeholder="Paid ₹"><button onclick="saveBill()">Save Bill</button><div id="blist"></div></section>
+
+<section id="report" class="card hidden"><h2>Report Preview</h2><input id="repid" type="number" placeholder="Patient ID"><button onclick="makeReport()">Generate Report</button><div id="reportbox"></div></section>
+
+<script>
+const key='vatsalya_lab_v1';
+let db=JSON.parse(localStorage.getItem(key)||'{"patients":[],"results":[],"bills":[]}');
+function save(){localStorage.setItem(key,JSON.stringify(db));update()}
+function show(id){document.querySelectorAll('section').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');update();if(id==='patients')renderPatients();if(id==='results')renderResults();if(id==='billing')renderBills()}
+function update(){document.getElementById('stats').textContent=`Patients: ${db.patients.length}  •  Results: ${db.results.length}  •  Bills: ${db.bills.length}`}
+function savePatient(){let n=pn.value.trim();if(!n)return alert('Patient name required');let id=db.patients.length?Math.max(...db.patients.map(x=>x.id))+1:1;db.patients.push({id,name:n,age:pa.value,gender:pg.value,mobile:pm.value,doctor:pd.value,date:new Date().toLocaleString()});save();alert('Patient saved. ID: '+id);pn.value=pa.value=pm.value=pd.value='';renderPatients()}
+function renderPatients(){let q=(ps.value||'').toLowerCase();let a=db.patients.filter(x=>String(x.id).includes(q)||x.name.toLowerCase().includes(q)||x.mobile.includes(q));plist.innerHTML=a.map(x=>`<div class="card"><b>ID ${x.id} — ${x.name}</b><br>Age: ${x.age} | ${x.gender}<br>Mobile: ${x.mobile}<br>Doctor: ${x.doctor||'-'}</div>`).join('')||'<p class="muted">No patients found</p>'}
+function saveResult(){let id=+rid.value;if(!db.patients.find(x=>x.id===id))return alert('Patient ID not found');db.results.push({id,test:rt.value,result:rr.value,unit:ru.value,ref:rf.value,date:new Date().toLocaleString()});save();alert('Result saved');renderResults()}
+function renderResults(){rlist.innerHTML=db.results.slice().reverse().map(x=>`<div class="card"><b>Patient ID ${x.id}</b><br>${x.test}: <b>${x.result}</b> ${x.unit}<br><span class="muted">Ref: ${x.ref}</span></div>`).join('')||'<p class="muted">No results</p>'}
+function saveBill(){let id=+bid.value,a=+ba.value,p=+bp.value;if(!db.patients.find(x=>x.id===id))return alert('Patient ID not found');db.bills.push({id,amount:a,paid:p,due:a-p,date:new Date().toLocaleString()});save();alert('Bill saved');renderBills()}
+function renderBills(){blist.innerHTML=db.bills.slice().reverse().map(x=>`<div class="card"><b>Patient ID ${x.id}</b><br>Total ₹${x.amount} • Paid ₹${x.paid} • Due ₹${x.due}</div>`).join('')||'<p class="muted">No bills</p>'}
+function makeReport(){let id=+repid.value,p=db.patients.find(x=>x.id===id);if(!p)return alert('Patient ID not found');let rs=db.results.filter(x=>x.id===id);reportbox.innerHTML=`<div class="card"><h2 style="text-align:center">वात्सल्य क्लिनिकल लॅब</h2><p style="text-align:center">अभोणा चौफुली, अभोणा<br>मो. ८८५६९९२९३८</p><hr><b>Patient ID:</b> ${p.id}<br><b>Name:</b> ${p.name}<br><b>Age:</b> ${p.age}<br><b>Gender:</b> ${p.gender}<br><b>Mobile:</b> ${p.mobile}<hr><table><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th></tr>${rs.map(x=>`<tr><td>${x.test}</td><td>${x.result}</td><td>${x.unit}</td><td>${x.ref}</td></tr>`).join('')}</table><p>Authorized Signatory</p><button onclick="window.print()">Print / Save PDF</button></div>`}
+function backup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='vatsalya_lab_backup.json';a.click()}
+update();
+</script></body></html>
